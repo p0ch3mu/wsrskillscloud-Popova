@@ -1,0 +1,90 @@
+---
+- hosts: project
+  vars_files:
+          - ./privvars.yml
+  vars:
+          - pass1: 'S52we9V6QTp7'
+          - pass2: 'dHy6sKGHsj2T'
+          - pass3: 'oP92ugMSaCbe'
+  tasks:
+          - name: Update apt-get repo and cache
+            apt:
+                    update_cache=yes
+                    force_apt_get=yes
+                    cache_valid_time=3600
+          - name: Install packets
+            apt:
+                    pkg:
+                            - curl
+                            - docker
+                            - docker.io
+                            - pip
+          - name: UFW open port 8o
+            ufw:
+                    state: enabled
+                    rule: allow
+                    proto: tcp
+                    port: '80'
+          - name: UFW open port 8o8o
+            ufw:
+                    rule: allow
+                    proto: tcp
+                    port: '8080'
+          - name: UFW open port l834
+            ufw:
+                    rule: allow
+                    proto: tcp
+                    port: '1834'
+          - name: Create user1
+            user:
+                    name: Webdeveloper
+                    password: '{{ pass1 | password_hash("sha512") }}'
+                    generate_ssh_key: yes
+                    ssh_key_bits: 2048
+                    ssh_key_file: .ssh/id_Webdeveloper_rsa
+          - name: Create user2
+            user:
+                    name: Devopsengineer
+                    password: '{{ pass2 | password_hash("sha512") }}'
+                    generate_ssh_key: yes
+                    ssh_key_bits: 2048
+                    ssh_key_file: .ssh/id_Devopsengineer_rsa
+          - name: Create user3
+            user:
+                    name: Projectmanager
+                    password: '{{ pass3 | password_hash("sha512") }}'
+                    generate_ssh_key: yes
+                    ssh_key_bits: 2048
+                    ssh_key_file: .ssh/id_Projectmanager_rsa
+          - name: docker-compose install 
+            script: docker-compose.sh
+          - name: Create directory /skillcloud-nginx
+            file:
+                    path: ~/skillcloud-nginx
+                    state: directory
+          - name: Copy files to /skillcloud-nginx
+            copy:
+                    src: '{{ item }}'
+                    dest: ~/skillcloud-nginx
+            with_items:
+                    - docker-compose.yml
+                    - Dockerfile-balance
+                    - Dockerfile-site
+                    - index.html
+                    - nginx.conf
+          - name: Configure ssh
+            copy:
+                    src: ./sshd_config
+                    dest: /etc/ssh/sshd_config
+          - name: Restart ssh
+            service:
+                    name: sshd
+                    state: restarted
+          - name: Restart ufw
+            service:
+                    name: ufw
+                    state: restarted
+          - name: Reboot a vm
+            reboot:
+                    reboot_timeout: 10
+            ignore_errors: true
